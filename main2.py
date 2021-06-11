@@ -8,6 +8,8 @@ import array
 font = cv2.FONT_HERSHEY_PLAIN
 
 cap = cv2.VideoCapture(0)
+text_disp = np.zeros((50,700), np.uint8)
+text_disp[:] = 255
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -32,11 +34,14 @@ def get_EAR(eye_points, facial_landmarks):
     ear = ver_line_length/hor_line_length
     return ear
 
-start = time.perf_counter()
-end = time.perf_counter()
-arr = array.array('u')
+start_t = time.perf_counter()
+tiempo = 0.0
+w_mode = False #write mode
+blink = False
+morse = ""
+text = ""
 
-#pestaeñeos iniciales
+#Considerar pestaeñeos iniciales
 
 while True:
     _, frame = cap.read()
@@ -51,36 +56,43 @@ while True:
         
         #umbral de cambio entre ojo abierto y ojo cerrado
         #este valor cambia dependiendo de la persona
-        ear_threshold = 0.240 #se debe ajustar a la persona 
-        #podría ser userfriendly
+        ear_threshold = 0.240 #se debe ajustar a la persona, podría ser userfriendly
 
-        print(left_eye_ear)
-        blink = False
-        start = time.perf_counter()
-        if left_eye_ear < ear_threshold and right_eye_ear < ear_threshold: #cierra ## DEBERÍA SER WHILE
+        if not blink and left_eye_ear < ear_threshold and right_eye_ear < ear_threshold: #cierra
             blink = True
+            start_t = time.perf_counter()
             #cv2.putText(frame, "BLINK", (50,50), font, 2, (255,0,0))
-            #cv2.putText(frame, "LEFT CLOSED", (50,50), font, 2, (0,255,0))
-            #cv2.putText(frame, "RIGHT CLOSED", (350,50), font, 2, (0,255,0)) 
-        end = time.perf_counter()
-       
-        if(end-start<0.5 and blink):
-        	arr.append('.')
-        elif(end-start<1.5 and blink):
-        	arr.append('-')
 
-
+        if left_eye_ear >= ear_threshold and right_eye_ear >= ear_threshold: #abre
+            if blink:
+                blink = False
+                tiempo = time.perf_counter() - start_t;
             
+            if not w_mode and tiempo > 5.0: #Entra en write mode
+                w_mode = True 
+                tiempo = 0
+                print("Write mode ON")
+            elif w_mode and tiempo > 5.0: #Sale de write mode
+                w_mode = False
+                tiempo = 0 
+                print("Write mode OFF")      
+    
+    if(w_mode and not blink and tiempo>0 and tiempo<1):
+        morse=morse+"."
+        tiempo = 0
+    elif(w_mode and not blink and tiempo>=1 and tiempo<3):
+        morse=morse+"-"
+        tiempo = 0
 
-
-    cv2.imshow("Frame", frame)
+    cv2.imshow("Camara", frame)
+    cv2.imshow("Display de Texto", text_disp)
+    print(morse)
 
     #cerrar programa con tecla "ESC"
     key = cv2.waitKey(1)
     if key == 27:
         break
 
-    print(arr)
 
 cap.release()
 cv2.destroyAllWindows()
