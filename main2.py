@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import dlib
 from math import hypot
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import time
 import array
 
@@ -34,20 +36,21 @@ def get_EAR(eye_points, facial_landmarks):
     ear = ver_line_length/hor_line_length
     return ear
 
-start_t = time.perf_counter()
-tiempo = 0.0
+start_b = 0.0
+start_notb = time.perf_counter()
+tiempo_blink = 0.0
+tiempo_not_blink = 0.0
 w_mode = False #write mode
 blink = False
 morse = ""
 text = ""
-
-#Considerar pestaeñeos iniciales
 
 while True:
     _, frame = cap.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     faces = detector(gray)
+    #Puede usar más de una cara, pero para propósitos de este programa, sólo un usuario debería aparecer en pantallas 
     for face in faces:
         landmarks = predictor(gray, face)
 
@@ -58,32 +61,53 @@ while True:
         #este valor cambia dependiendo de la persona
         ear_threshold = 0.240 #se debe ajustar a la persona, podría ser userfriendly
 
-        if not blink and left_eye_ear < ear_threshold and right_eye_ear < ear_threshold: #cierra
-            blink = True
-            start_t = time.perf_counter()
+        #cierra
+        if left_eye_ear < ear_threshold and right_eye_ear < ear_threshold: 
+            if not blink:
+                blink = True
+                start_b = time.perf_counter()
+                tiempo_blink = 0
+                tiempo_not_blink = time.perf_counter() - start_notb
+            else:
+                continue
+
+
             #cv2.putText(frame, "BLINK", (50,50), font, 2, (255,0,0))
 
-        if left_eye_ear >= ear_threshold and right_eye_ear >= ear_threshold: #abre
+        #abre
+        if left_eye_ear >= ear_threshold and right_eye_ear >= ear_threshold: 
             if blink:
                 blink = False
-                tiempo = time.perf_counter() - start_t;
+                tiempo_blink = time.perf_counter() - start_b
+                start_notb = time.perf_counter()
             
-            if not w_mode and tiempo > 5.0: #Entra en write mode
+            if not w_mode and tiempo_blink > 5.0: #Entra en write mode
                 w_mode = True 
-                tiempo = 0
+                tiempo_blink = 0
                 print("Write mode ON")
-            elif w_mode and tiempo > 5.0: #Sale de write mode
+            elif w_mode and tiempo_blink > 5.0: #Sale de write mode
                 w_mode = False
-                tiempo = 0 
-                print("Write mode OFF")      
-    
-    if(w_mode and not blink and tiempo>0 and tiempo<1):
-        morse=morse+"."
-        tiempo = 0
-    elif(w_mode and not blink and tiempo>=1 and tiempo<3):
-        morse=morse+"-"
-        tiempo = 0
+                tiempo_blink = 0 
+                print("Write mode OFF")
 
+
+    if(w_mode and not blink and tiempo_blink>0 and tiempo_blink<0.5): #abrio los ojos
+        morse=morse+"."
+        tiempo_blink = 0
+    elif(w_mode and not blink and tiempo_blink>=1.5 and tiempo_blink<3): #abrio los ojos
+        morse=morse+"-"
+        tiempo_blink = 0
+    elif(w_mode and blink and tiempo_not_blink>=3 and tiempo_not_blink<5): #cerró los ojos
+        morse=morse+"/"
+        tiempo_not_blink=0
+    elif(w_mode and blink and tiempo_not_blink>=5): #cerró los ojos
+        morse=morse+" "
+        tiempo_not_blink=0
+
+    cv2.putText(text_disp,text, (10,30), font, 2, 0, 1)
+   
+    image = cv2.imread("morse.jpg")
+    cv2.imshow("Guía Morse", image)
     cv2.imshow("Camara", frame)
     cv2.imshow("Display de Texto", text_disp)
     print(morse)
