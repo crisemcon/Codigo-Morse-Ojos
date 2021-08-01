@@ -10,7 +10,7 @@ import array
 font = cv2.FONT_HERSHEY_PLAIN
 
 cap = cv2.VideoCapture(0)
-text_disp = np.zeros((500,700), np.uint8)
+text_disp = np.zeros((70,1143,3), np.uint8)
 text_disp[:] = 255
 ear_frame = np.zeros((88,503,3), np.uint8)
 ear_frame[:] = 255
@@ -160,22 +160,20 @@ while True:
     height = int(image.shape[0] * scale_percent / 100)
     dsize = (width, height)
     output = cv2.resize(image, dsize) #resize image
-    height, width, channels = output.shape
-    print(height,width,channels)
     if(w_mode):
         cv2.putText(frame, "MODO ESCRITURA", (50,50), font, 2, (255,0,0))
     cv2.putText(frame, "\"ESC\" PARA SALIR", (50,450), font, 2, (0,0,255))
-    cv2.imshow("Camara", frame)
-    cv2.imshow("Guia Morse", output)
-    cv2.imshow("Adjust EAR", ear_frame)
-    cv2.imshow("Adjust Speed", speed_frame)
-    cv2.imshow("Display de Texto", text_disp)
-    numpy_vertical = np.vstack((output, ear_frame, speed_frame))
-    numpy_vertical_concat = np.concatenate((output, ear_frame, speed_frame))
-    #numpy_horizontal = np.hstack((frame, output))
-    #numpy_horizontal_concat = np.concatenate((frame,output), axis=1)
-    cv2.imshow("Stack", numpy_vertical)
-    #cv2.imshow('Numpy Horizontal Concat', numpy_horizontal_concat)
+    #cv2.imshow("Camara", frame)
+    #cv2.imshow("Guia Morse", output)
+    #cv2.imshow("Adjust EAR", ear_frame)
+    #cv2.imshow("Adjust Speed", speed_frame)
+    #cv2.imshow("Display de Texto", text_disp)
+    vertical = np.vstack((output, ear_frame, speed_frame))
+    horizontal = np.hstack((vertical, frame))
+    final = np.vstack((horizontal, text_disp))
+    #height, width, channels = numpy_horizontal.shape
+    #print(height,width,channels)
+    cv2.imshow("Blinking Morse", final)
     if(w_mode):
         print(morse)
 
