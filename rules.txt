@@ -1,0 +1,10 @@
+
+. : 0<t_blink<0.5
+- : 1.5<t_blink<3
+separador letras: "/" : 3<t_notblink<5 (no pestañear)
+separador palabras: " " : t_notblink > 5 (no pestañear)
+write mode: t>5
+
+Ejemplo:
+#morse = ".-/-... .-"
+#text = "ab a"
