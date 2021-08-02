@@ -38,14 +38,14 @@ def on_change_speed(value):
     return
 
 #obtiene el EAR(relacion de aspecto del ojo) de un ojo
-def get_EAR(eye_points, facial_landmarks):
+def get_EAR(eye_points, facial_landmarks, frame):
     left_point = (facial_landmarks.part(eye_points[0]).x, facial_landmarks.part(eye_points[0]).y)
     right_point = (facial_landmarks.part(eye_points[3]).x, facial_landmarks.part(eye_points[3]).y)
     top_point = get_midpoint(facial_landmarks.part(eye_points[1]),facial_landmarks.part(eye_points[2]))
     bottom_point = get_midpoint(facial_landmarks.part(eye_points[5]),facial_landmarks.part(eye_points[4]))
 
-    hor_line = cv2.line(frame, left_point, right_point, (0,255,0), 1)
-    ver_line = cv2.line(frame, top_point, bottom_point, (0,255,0), 1)
+    hor_line = cv2.line(frame, left_point, right_point, (255,255,0), 1)
+    ver_line = cv2.line(frame, top_point, bottom_point, (255,255,0), 1)
 
     ver_line_length = hypot((top_point[0] - bottom_point[0]), (top_point[1] - bottom_point[1]))
     hor_line_length = hypot((left_point[0] - right_point[0]), (left_point[1] - right_point[1]))
@@ -115,15 +115,7 @@ while True:
     #cv2.imshow("Adjust Speed", speed_frame)
     #cv2.imshow("Display de Texto", text_disp)
     vertical = np.vstack((output, ear_frame, speed_frame))
-    horizontal = np.hstack((vertical, frame))
-    final = np.vstack((horizontal, text_disp))
-    #height, width, channels = numpy_horizontal.shape
-    #print(height,width,channels)
-    cv2.imshow("Blinking Morse", final)
-    cv2.createTrackbar('EAR Threshold', 'Blinking Morse', 20, 80, on_change_ear)
-    cv2.createTrackbar('Speed', 'Blinking Morse', 50, 100, on_change_speed)
-    ear_threshold = cv2.getTrackbarPos('EAR Threshold', 'Blinking Morse') / 100
-    speed = cv2.getTrackbarPos('Speed', 'Blinking Morse')
+    
     #print(ear_threshold)
     if(w_mode):
         print(morse)
@@ -133,8 +125,8 @@ while True:
     for face in faces:
         landmarks = predictor(gray, face)
 
-        left_eye_ear = get_EAR([36,37,38,39,40,41], landmarks)
-        right_eye_ear = get_EAR([42,43,44,45,46,47], landmarks)
+        left_eye_ear = get_EAR([36,37,38,39,40,41], landmarks, frame)
+        right_eye_ear = get_EAR([42,43,44,45,46,47], landmarks, frame)
 
         #cierra
         if left_eye_ear < ear_threshold and right_eye_ear < ear_threshold: 
@@ -145,7 +137,7 @@ while True:
                 tiempo_not_blink = time.perf_counter() - start_notb
             else:
                 continue
-            #cv2.putText(frame, "BLINK", (50,50), font, 2, (255,0,0))
+            #cv2.putText(frame, "BLINK", (50,50), font, 4, (0,255,0))
 
         #abre
         if left_eye_ear >= ear_threshold and right_eye_ear >= ear_threshold: 
@@ -189,6 +181,17 @@ while True:
                 text=text+" "
         morse=""
         end_l=False
+    
+    horizontal = np.hstack((vertical, frame))
+    final = np.vstack((horizontal, text_disp))
+    #height, width, channels = numpy_horizontal.shape
+    #print(height,width,channels)
+    cv2.putText(text_disp,text, (10,30), font, 2, 0, 1)
+    cv2.imshow("Blinking Morse", final)
+    cv2.createTrackbar('EAR Threshold', 'Blinking Morse', 20, 80, on_change_ear)
+    cv2.createTrackbar('Speed', 'Blinking Morse', 50, 100, on_change_speed)
+    ear_threshold = cv2.getTrackbarPos('EAR Threshold', 'Blinking Morse') / 100
+    speed = cv2.getTrackbarPos('Speed', 'Blinking Morse')
     
     #print(round(time.perf_counter()-tiempo_beep))
     if(round(time.perf_counter()-tiempo_beep, 1) == round(speed/50, 1)):
