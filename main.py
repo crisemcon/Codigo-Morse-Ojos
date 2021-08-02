@@ -9,23 +9,25 @@ import array
 import threading
 from threading import Timer
 
-font = cv2.FONT_HERSHEY_PLAIN
+font = cv2.FONT_HERSHEY_DUPLEX
 
 cap = cv2.VideoCapture(0)
 text_disp = np.zeros((70,1143,3), np.uint8)
 text_disp[:] = 255
-ear_frame = np.zeros((88,503,3), np.uint8)
-ear_frame[:] = 255
-speed_frame = np.zeros((88,503,3), np.uint8)
-speed_frame[:] = 255
+instruct_frame = np.zeros((106,503,3), np.uint8)
+instruct_frame[:] = 255
+morse_disp = np.zeros((70,503,3), np.uint8)
+morse_disp[:] = 255
 
+instructions1 = "_________________________________________________________________"
+instructions2 = " \".\" = Cerrar por 1 beep" 
+instructions3 = " \"-\" = Cerrar por 3 beeps" 
+instructions4 = " Separador de letras = Abrir por 4 beeps" 
+instructions5 = " \" \" = Abrir por 5 beeps" 
+instructions6 = " Entrar/Salir MODO ESCRITURA = Cerrar por 5 beeps" 
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-#umbral de cambio entre ojo abierto y ojo cerrado
-#este valor cambia dependiendo de la persona
-ear_threshold = 0.240 #se debe ajustar a la persona, podría ser userfriendly
 
 #obtiene el punto medio entre dos puntos
 def get_midpoint(p1,p2):
@@ -72,7 +74,7 @@ def morse2char(letra):
     elif(letra=="---"): letra='o'
     elif(letra==".--."): letra='p'
     elif(letra=="--.-"): letra='q'
-    elif(letra=="._."): letra='r'
+    elif(letra==".-."): letra='r'
     elif(letra=="..."): letra='s'
     elif(letra=="-"): letra='t'
     elif(letra=="..-"): letra='u'
@@ -94,31 +96,33 @@ morse = ""
 text = ""
 end_l = False #termina letra
 tiempo_beep = time.perf_counter()
+speed = 50 #puede cambiar
+#umbral de cambio entre ojo abierto y ojo cerrado
+#este valor cambia dependiendo de la persona
+ear_threshold = 0.240 #se debe ajustar a la persona, userfriendly
+
+#Sliders para ajustar EAR y Speed
+cv2.namedWindow('Sliders')
+cv2.resizeWindow('Sliders', 1143, 100)
+cv2.createTrackbar('EAR Threshold', 'Sliders', 24, 80, on_change_ear)
+cv2.createTrackbar('Speed', 'Sliders', 50, 100, on_change_speed)
 
 while True:
     _, frame = cap.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #frame = cv2.resize(frame, (508, 381))
     #print(frame.shape)
-    image = cv2.imread("recordar-codigo-morse.png")
-    scale_percent = 40 #percent by which the image is resized
-    width = int(image.shape[1] * scale_percent / 100)
-    height = int(image.shape[0] * scale_percent / 100)
-    dsize = (width, height)
-    output = cv2.resize(image, dsize) #resize image
-    if(w_mode):
-        cv2.putText(frame, "MODO ESCRITURA", (50,50), font, 2, (255,0,0))
-    cv2.putText(frame, "\"ESC\" PARA SALIR", (50,450), font, 2, (0,0,255))
-    #cv2.imshow("Camara", frame)
-    #cv2.imshow("Guia Morse", output)
-    #cv2.imshow("Adjust EAR", ear_frame)
-    #cv2.imshow("Adjust Speed", speed_frame)
-    #cv2.imshow("Display de Texto", text_disp)
-    vertical = np.vstack((output, ear_frame, speed_frame))
-    
+
+    morse_disp = np.zeros((70,503,3), np.uint8)
+    morse_disp[:] = 0
+        
+    ear_threshold = int(cv2.getTrackbarPos('EAR Threshold', 'Sliders')) / 100
+    speed = int(cv2.getTrackbarPos('Speed', 'Sliders'))
+
     #print(ear_threshold)
     if(w_mode):
         print(morse)
+        cv2.putText(morse_disp, morse, (10,40), font, 1, (255,255,255), 1)
 
     faces = detector(gray)
     #Puede usar más de una cara, pero para propósitos de este programa, sólo un usuario debería aparecer en pantalla 
@@ -182,16 +186,37 @@ while True:
         morse=""
         end_l=False
     
+
+    #Dibujar todo
+    image = cv2.imread("recordar-codigo-morse.png")
+    scale_percent = 40 #percent by which the image is resized
+    width = int(image.shape[1] * scale_percent / 100)
+    height = int(image.shape[0] * scale_percent / 100)
+    dsize = (width, height)
+    output = cv2.resize(image, dsize) #resize image
+    if(w_mode):
+        cv2.putText(frame, "MODO ESCRITURA", (50,50), font, 1, (255,0,0))
+    else:
+        cv2.putText(frame, "ESCRITURA OFF", (50,50), font, 1, (0,0,255))
+    cv2.putText(frame, "\"ESC\" PARA SALIR", (50,450), font, 1, (0,0,255))
+    #cv2.imshow("Camara", frame)
+    #cv2.imshow("Guia Morse", output)
+    #cv2.imshow("Display de Texto", text_disp)
+    cv2.putText(instruct_frame, instructions1, (0,0), font, 0.5, 0, 1)
+    cv2.putText(instruct_frame, instructions2, (10,15), font, 0.5, 0, 1)
+    cv2.putText(instruct_frame, instructions3, (10,35), font, 0.5, 0, 1)
+    cv2.putText(instruct_frame, instructions4, (10,55), font, 0.5, 0, 1)
+    cv2.putText(instruct_frame, instructions5, (10,75), font, 0.5, 0, 1)
+    cv2.putText(instruct_frame, instructions6, (10,95), font, 0.5, 0, 1)
+    text_disp = np.zeros((70,1143,3), np.uint8)
+    text_disp[:] = 255
+    cv2.putText(text_disp, text, (10,40), font, 1, 0, 1)
+    vertical = np.vstack((output, instruct_frame, morse_disp))
     horizontal = np.hstack((vertical, frame))
     final = np.vstack((horizontal, text_disp))
     #height, width, channels = numpy_horizontal.shape
     #print(height,width,channels)
-    cv2.putText(text_disp,text, (10,30), font, 2, 0, 1)
     cv2.imshow("Blinking Morse", final)
-    cv2.createTrackbar('EAR Threshold', 'Blinking Morse', 20, 80, on_change_ear)
-    cv2.createTrackbar('Speed', 'Blinking Morse', 50, 100, on_change_speed)
-    ear_threshold = cv2.getTrackbarPos('EAR Threshold', 'Blinking Morse') / 100
-    speed = cv2.getTrackbarPos('Speed', 'Blinking Morse')
     
     #print(round(time.perf_counter()-tiempo_beep))
     if(round(time.perf_counter()-tiempo_beep, 1) == round(speed/50, 1)):
@@ -205,4 +230,4 @@ while True:
 
 
 cap.release()
-cv2.destroyAllWindows()
+cv2.destroyAllWindows()     
